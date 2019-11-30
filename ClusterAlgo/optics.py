@@ -9,18 +9,18 @@ import numpy as np
 
 def euclidean(p1, p2):
     """欧氏距离"""
-    return np.sum(np.square(p1.row - p2.row))
+    return np.linalg.norm(p1 - p2)
 
 
 class Point:
-    def __init__(self, row):
-        self.row = row
+    def __init__(self, data):
+        self.data = data
         self.cd = None  # core distance
         self.rd = None  # reachability distance
         self.processed = False  # has this point been processed?
 
     def __repr__(self):
-        return str(self.row)
+        return str(self.data)
 
 
 class Optics:
@@ -44,14 +44,14 @@ class Optics:
             return point.cd
         if len(neighbors) < self.min_cluster_size - 1:
             return None
-        sorted_neighbors = sorted([self.distance(point, n) for n in neighbors])
+        sorted_neighbors = sorted([self.distance(point.data, n.data) for n in neighbors])
         point.cd = sorted_neighbors[self.min_cluster_size - 2]
         return point.cd
 
     def _neighbors(self, point):
         """找到其所有直接密度可达样本点"""
         return [p for p in self.points if p is not point and
-                self.distance(point, p) <= self.max_radius]
+                self.distance(point.data, p.data) <= self.max_radius]
 
     def _processed(self, point):
         """ mark a point as processed """
@@ -66,7 +66,7 @@ class Optics:
             # find new reachability distance new_rd
             # if rd is null, keep new_rd and add n to the seed list
             # otherwise if new_rd < old rd, update rd
-            new_rd = max(point.cd, self.distance(n, point))
+            new_rd = max(point.cd, self.distance(n.data, point.data))
             if n.rd is None:
                 n.rd = new_rd
                 seeds.append(n)
