@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # optics聚类算法
+# 参考：https://www.biaodianfu.com/optics.html
 # Author: alex
 # Created Time: 2019年11月30日 星期六 10时42分17秒
 import numpy as np
@@ -27,7 +28,7 @@ class Optics:
 
     def __init__(self, max_radius, min_cluster_size, distance=euclidean):
         """
-        :param max_radius: int|float, 最大半径
+        :param max_radius: int|float, 邻域半径
         :param min_cluster_size: int, 最小聚类的数据点的数量
         :param distance: function, 距离函数，可以在外部自定义，默认为欧氏距离
         说明：
@@ -48,7 +49,7 @@ class Optics:
         return point.cd
 
     def _neighbors(self, point):
-        # neighbors for a point within max_radius
+        """找到其所有直接密度可达样本点"""
         return [p for p in self.points if p is not point and
                 self.distance(point, p) <= self.max_radius]
 
@@ -74,10 +75,13 @@ class Optics:
 
     def fit(self, points):
         self.points = [Point(row) for row in points]
+
+        # 有序队列用来存储核心对象及其该核心对象的直接可达对象，并按可达距离升序排列
         self.unprocessed = [p for p in self.points]
+        # 结果队列用来存储样本点的输出次序
         self.ordered = []
 
-        # for each unprocessed point (p)...
+        # 选择一个未处理且为核心对象的样本点，找到其所有直接密度可达样本点
         while self.unprocessed:
             point = self.unprocessed[0]
             # mark p as processed
@@ -85,23 +89,26 @@ class Optics:
             self._processed(point)
             point_neighbors = self._neighbors(point)
             # if p has a core_distance, i.e has min_cluster_size - 1 neighbors
-            if self._core_distance(point, point_neighbors) is not None:
-                # update reachability_distance for each unprocessed neighbor
-                seeds = []
-                self._update(point_neighbors, point, seeds)
-                # as long as we have unprocessed neighbors...
-                while (seeds):
-                    # find the neighbor n with smallest reachability distance
-                    seeds.sort(key=lambda n: n.rd)
-                    n = seeds.pop(0)
-                    # mark n as processed
-                    # find n's neighbors
-                    self._processed(n)
-                    n_neighbors = self._neighbors(n)
-                    # if p has a core_distance...
-                    if self._core_distance(n, n_neighbors) is not None:
-                        # update reachability_distance for each of n's neighbors
-                        self._update(n_neighbors, n, seeds)
+            if self._core_distance(point, point_neighbors) is None:
+                # 该点密度可达距离内的样本点数不满足条件
+                continue
+
+            # update reachability_distance for each unprocessed neighbor
+            seeds = []
+            self._update(point_neighbors, point, seeds)
+            # as long as we have unprocessed neighbors...
+            while (seeds):
+                # find the neighbor n with smallest reachability distance
+                seeds.sort(key=lambda n: n.rd)
+                n = seeds.pop(0)
+                # mark n as processed
+                # find n's neighbors
+                self._processed(n)
+                n_neighbors = self._neighbors(n)
+                # if p has a core_distance...
+                if self._core_distance(n, n_neighbors) is not None:
+                    # update reachability_distance for each of n's neighbors
+                    self._update(n_neighbors, n, seeds)
 
         # when all points have been processed
         # return the ordered list
