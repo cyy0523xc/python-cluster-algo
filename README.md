@@ -3,6 +3,15 @@
 
 scikit-learn中包含很多聚类的算法，但是在使用的过程中发现一个比较大的问题，如optics算法，不能自定义距离，只能造一个轮子。
 
+## Install
+
+```sh
+# 安装依赖
+pip3 install -r https://github.com/cyy0523xc/python-cluster-algo/raw/master/requirements.txt
+
+# 安装
+pip3 install git+https://github.com/cyy0523xc/python-cluster-algo.git
+```
 
 ## 支持的算法列表
 
