@@ -1,59 +1,54 @@
 # -*- coding: utf-8 -*-
 #
-#
+# optics聚类算法
 # Author: alex
 # Created Time: 2019年11月30日 星期六 10时42分17秒
 import numpy as np
 
 
+def euclidean(p1, p2):
+    """欧氏距离"""
+    return np.sum(np.square(p1.row - p2.row))
+
+
 class Point:
     def __init__(self, row):
-        self.row = np.array(row)
+        self.row = row
         self.cd = None  # core distance
         self.rd = None  # reachability distance
         self.processed = False  # has this point been processed?
-
-    def distance(self, point):
-        # calculate the distance between any two points on earth
-        # convert coordinates to radians
-        return np.sum(np.square(self.row - point.row))
 
     def __repr__(self):
         return ", ".join([str(i) for i in self.row])
 
 
-class Cluster:
-    def __init__(self, points):
-        self.points = points
-
-
 class Optics:
-    def __init__(self, points, max_radius, min_cluster_size):
-        self.points = points
-        self.max_radius = max_radius  # maximum radius to consider
-        self.min_cluster_size = min_cluster_size  # minimum points in cluster
+    inf = float('infinity')
 
-    def _setup(self):
-        # get ready for a clustering run
-        for p in self.points:
-            p.rd = None
-            p.processed = False
-        self.unprocessed = [p for p in self.points]
-        self.ordered = []
+    def __init__(self, max_radius, min_cluster_size, distance=euclidean):
+        """
+        :param max_radius: int|float, 最大半径
+        :param min_cluster_size: int, 最小聚类的数据点的数量
+        :param distance: function, 距离函数，可以在外部自定义，默认为欧氏距离
+        """
+        self.max_radius = max_radius
+        self.min_cluster_size = min_cluster_size
+        self.distance = distance
 
     def _core_distance(self, point, neighbors):
         # distance from a point to its nth neighbor (n = min_cluser_size)
         if point.cd is not None:
             return point.cd
-        if len(neighbors) >= self.min_cluster_size - 1:
-            sorted_neighbors = sorted([n.distance(point) for n in neighbors])
-            point.cd = sorted_neighbors[self.min_cluster_size - 2]
-            return point.cd
+        if len(neighbors) < self.min_cluster_size - 1:
+            return None
+        sorted_neighbors = sorted([self.distance(point, n) for n in neighbors])
+        point.cd = sorted_neighbors[self.min_cluster_size - 2]
+        return point.cd
 
     def _neighbors(self, point):
         # neighbors for a point within max_radius
         return [p for p in self.points if p is not point and
-                p.distance(point) <= self.max_radius]
+                self.distance(point, p) <= self.max_radius]
 
     def _processed(self, point):
         """ mark a point as processed """
@@ -68,16 +63,18 @@ class Optics:
             # find new reachability distance new_rd
             # if rd is null, keep new_rd and add n to the seed list
             # otherwise if new_rd < old rd, update rd
-            new_rd = max(point.cd, point.distance(n))
+            new_rd = max(point.cd, self.distance(n, point))
             if n.rd is None:
                 n.rd = new_rd
                 seeds.append(n)
             elif new_rd < n.rd:
                 n.rd = new_rd
 
-    def run(self):
-        # run the OPTICS algorithm
-        self._setup()
+    def fit(self, points):
+        self.points = [Point(row) for row in points]
+        self.unprocessed = [p for p in self.points]
+        self.ordered = []
+
         # for each unprocessed point (p)...
         while self.unprocessed:
             point = self.unprocessed[0]
@@ -114,7 +111,7 @@ class Optics:
         for i in range(len(self.ordered)):
             this_i = i
             this_p = self.ordered[i]
-            this_rd = this_p.rd if this_p.rd else float('infinity')
+            this_rd = this_p.rd if this_p.rd else self.inf
             # use an upper limit to separate the clusters
             if this_rd > cluster_threshold:
                 separators.append(this_i)
@@ -124,7 +121,7 @@ class Optics:
             start = separators[i]
             end = separators[i + 1]
             if end - start >= self.min_cluster_size:
-                clusters.append(Cluster(self.ordered[start:end]))
+                clusters.append(self.ordered[start:end])
 
         return clusters
 
@@ -132,16 +129,17 @@ class Optics:
 if __name__ == "__main__":
     # LOAD SOME POINTS
     points = [
-        Point((1, 1)),  # cluster #1
-        Point((1, 3)),  # cluster #1
-        Point((2, 2)),  # cluster #1
-        Point((4, 6)),  # cluster #2
-        Point((5, 7)),  # cluster #2
+        np.array((1, 1)),
+        np.array((1, 3)),
+        np.array((2, 2)),
+        np.array((4, 6)),
+        np.array((5, 7)),
     ]
 
-    optics = Optics(points, 4, 2)
-    optics.run()
+    optics = Optics(4, 2)
+    optics.fit(points)
     clusters = optics.cluster(2)
 
     for cluster in clusters:
-        print(cluster.points)
+        print(len(cluster))
+        print(cluster)
