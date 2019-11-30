@@ -19,7 +19,7 @@ class Point:
         self.processed = False  # has this point been processed?
 
     def __repr__(self):
-        return ", ".join([str(i) for i in self.row])
+        return str(self.row)
 
 
 class Optics:
