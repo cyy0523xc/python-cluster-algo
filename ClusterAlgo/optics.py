@@ -30,6 +30,8 @@ class Optics:
         :param max_radius: int|float, 最大半径
         :param min_cluster_size: int, 最小聚类的数据点的数量
         :param distance: function, 距离函数，可以在外部自定义，默认为欧氏距离
+        说明：
+        距离函数定义：def function_name(point1, point2)
         """
         self.max_radius = max_radius
         self.min_cluster_size = min_cluster_size
