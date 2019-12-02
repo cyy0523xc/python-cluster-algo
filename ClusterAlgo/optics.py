@@ -15,9 +15,9 @@ def euclidean(p1, p2):
 class Point:
     def __init__(self, data):
         self.data = data
-        self.cd = None  # core distance
-        self.rd = None  # reachability distance
-        self.processed = False  # has this point been processed?
+        self.cd = None  # 核心距离
+        self.rd = None  # 可达距离
+        self.processed = False  # 该样本点是否已经处理过
 
     def __repr__(self):
         return str(self.data)
@@ -79,9 +79,8 @@ class Optics:
 
         # 待处理队列
         self.unprocessed = [p for p in self.points]
-        # 结果队列用来存储样本点的输出次序
-        self.ordered = []
-        seeds = []   # 核心点周围的未处理的邻点
+        self.ordered = []    # 处理过的样本点
+        seeds = []   # 核心点周围的未处理的邻居点
 
         # 选择一个未处理且为核心对象的样本点，找到其所有直接密度可达样本点
         while self.unprocessed or seeds:
