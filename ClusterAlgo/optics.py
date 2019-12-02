@@ -44,7 +44,8 @@ class Optics:
             return point.cd
         if len(neighbors) < self.min_cluster_size - 1:
             return None
-        sorted_neighbors = sorted([self.distance(point.data, n.data) for n in neighbors])
+        sorted_neighbors = sorted([self.distance(point.data, n.data)
+                                   for n in neighbors])
         point.cd = sorted_neighbors[self.min_cluster_size - 2]
         return point.cd
 
@@ -76,46 +77,37 @@ class Optics:
     def fit(self, points):
         self.points = [Point(row) for row in points]
 
-        # 有序队列用来存储核心对象及其该核心对象的直接可达对象，并按可达距离升序排列
+        # 待处理队列
         self.unprocessed = [p for p in self.points]
         # 结果队列用来存储样本点的输出次序
         self.ordered = []
+        seeds = []   # 核心点周围的未处理的邻点
 
         # 选择一个未处理且为核心对象的样本点，找到其所有直接密度可达样本点
-        while self.unprocessed:
-            point = self.unprocessed[0]
+        while self.unprocessed or seeds:
+            # 优先从seeds选择一个点
+            if seeds:
+                seeds.sort(key=lambda n: n.rd)
+                point = seeds.pop(0)
+            else:
+                point = self.unprocessed[0]
+
             # mark p as processed
-            # find p's neighbors
             self._processed(point)
+            # find p's neighbors
             point_neighbors = self._neighbors(point)
-            # if p has a core_distance, i.e has min_cluster_size - 1 neighbors
             if self._core_distance(point, point_neighbors) is None:
-                # 该点密度可达距离内的样本点数不满足条件
+                # point不满足核心点的条件
                 continue
 
             # update reachability_distance for each unprocessed neighbor
-            seeds = []
             self._update(point_neighbors, point, seeds)
-            # as long as we have unprocessed neighbors...
-            while (seeds):
-                # find the neighbor n with smallest reachability distance
-                seeds.sort(key=lambda n: n.rd)
-                n = seeds.pop(0)
-                # mark n as processed
-                # find n's neighbors
-                self._processed(n)
-                n_neighbors = self._neighbors(n)
-                # if p has a core_distance...
-                if self._core_distance(n, n_neighbors) is not None:
-                    # update reachability_distance for each of n's neighbors
-                    self._update(n_neighbors, n, seeds)
 
         # when all points have been processed
         # return the ordered list
         return self.ordered
 
     def cluster(self, cluster_threshold):
-        clusters = []
         separators = []
         for i in range(len(self.ordered)):
             this_i = i
@@ -125,6 +117,7 @@ class Optics:
             if this_rd > cluster_threshold:
                 separators.append(this_i)
 
+        clusters = []
         separators.append(len(self.ordered))
         for i in range(len(separators) - 1):
             start = separators[i]
@@ -149,6 +142,10 @@ if __name__ == "__main__":
     optics.fit(points)
     clusters = optics.cluster(2)
 
+    """
+    输出：
+    [[1 1], [2 2], [1 3]]
+    [[4 6], [5 7]]
+    """
     for cluster in clusters:
-        print(len(cluster))
         print(cluster)
