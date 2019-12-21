@@ -179,3 +179,5 @@ if __name__ == "__main__":
     clusters = optics.cluster(2)
     for cluster in clusters:
         print(cluster)
+        for p in cluster:
+            print(p.data, type(p), p.index)
